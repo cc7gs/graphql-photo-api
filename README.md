@@ -548,7 +548,7 @@ query getCurrentUser{
   }
 }
 ```
-
+该仓库为学习分支，了解更多内容点击该仓库[https://github.com/cc7gs/frontEnd_note/tree/master/basic/nodejs-basic/framework]
 
 # 参考
 [intro-to-graphql](https://slides.com/scotups/intro-to-graphql#/)
