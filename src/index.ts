@@ -1,23 +1,22 @@
 import * as express from 'express'
-import { ApolloServer } from 'apollo-server-express'
+import { ApolloServer,PubSub } from 'apollo-server-express'
 import expressPlayground from 'graphql-playground-middleware-express'
 import * as mongoose from 'mongoose'
 import {Db} from 'mongodb'
+import  {createServer} from 'http'
 import * as path from 'path'
 import resolvers from './resolvers'
 import { readFileSync } from 'fs'
-
+import {DB_HOST} from './utils/config'
 const typeDefs = readFileSync(path.resolve(__dirname, './schema/typeDefs.graphql'), 'UTF-8');
 
-require('dotenv').config()
 
 async function start() {
     const app = express();
-    const MONGO_DB = process.env.DB_HOST;
     let db:Db;
 
     try {
-       const client= await mongoose.connect(MONGO_DB!,
+       const client= await mongoose.connect(DB_HOST!,
             { useNewUrlParser: true }
         )
         
@@ -32,17 +31,7 @@ async function start() {
       `)
         process.exit(1)
     }
-    // const context = { db };
-    // const server = new ApolloServer({
-    //     typeDefs,
-    //     resolvers,
-    //     context: async({req})=>{
-    //         const githubToken=req.headers.authorization;
-    //         console.warn('not get Authorization',githubToken);
-    //         const currentUser=await db.collection('users').findOne({githubToken})
-    //         return {db,currentUser}
-    //     }
-    // })
+    const pubsub=new PubSub();
     const server = new ApolloServer({
         typeDefs,
         resolvers,
@@ -50,20 +39,21 @@ async function start() {
           const githubToken = req.headers.authorization;
           
           const currentUser = await db.collection('users').findOne({ githubToken })
-          return { db, currentUser }
+          return { db, currentUser,pubsub }
         }
       })
-
-    server.applyMiddleware({ app });
-
+    const httpServer=createServer(app);
+    // server.applyMiddleware({ app });
+    server.installSubscriptionHandlers(httpServer)
+    
     app.get('/', (req, res) => {
         res.send('Welcome to the PhotoShare API');
     })
 
     app.get('/playground', expressPlayground({ endpoint: '/graphql' }))
 
-    app.listen({ port: 4000 }, () => {
-        console.log(`GraphQL server running @ http://localhost:4000${server.graphqlPath}`)
+    httpServer.listen({ port: 5000 }, () => {
+        console.log(`GraphQL server running @ http://localhost:5000${server.graphqlPath}`)
     })
 
 }

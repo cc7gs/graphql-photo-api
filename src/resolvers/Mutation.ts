@@ -1,9 +1,10 @@
 import {authorizeWithGithub} from '../lib'
 import  fetch from 'node-fetch'
-import {ObjectID } from 'mongodb'
+import {ObjectID}from 'mongodb'
 import {Fn} from './types'
+import {CLIENT_ID,CLIENT_SECRET} from '../utils/config'
 
-const postPhoto:Fn=async(parent,args,{db,currentUser})=>{
+const postPhoto:Fn=async(parent,args,{db,pubsub,currentUser})=>{
   //1. 检查登录是否登录
   if(!currentUser){
     throw new Error('Only an authorized user can post a photo');
@@ -17,13 +18,19 @@ const postPhoto:Fn=async(parent,args,{db,currentUser})=>{
   //3. 入库、并获取id
   const {insertedIds}=await db.collection('photos').insert(newPhoto)
   newPhoto.id=insertedIds[0] 
+  
+  pubsub.publish('photo-added', { newPhoto })
 
   return newPhoto
 }
-const tagPhoto=()=>{
+const tagPhoto:Fn=async(parent,args,{db})=>{
+  await db.collection('tags')
+  .replaceOne(args, args, { upsert: true })
 
+return db.collection('photos')
+  .findOne({ _id: new ObjectID(args.photoID) }) 
 }
-const githubAuth:Fn=async(parent,{code},{db})=>{
+const githubAuth:Fn=async(parent,{code},{db,pubsub})=>{
  //1. 从github获取用户数据 
  let {
     message,
@@ -32,8 +39,8 @@ const githubAuth:Fn=async(parent,{code},{db})=>{
     login,
     name
   } = await authorizeWithGithub({
-    client_id: process.env.CLIENT_ID!,
-    client_secret: process.env.CLIENT_SECRET!,
+    client_id: CLIENT_ID!,
+    client_secret: CLIENT_SECRET!,
     code
   });
 
@@ -47,13 +54,15 @@ const githubAuth:Fn=async(parent,{code},{db})=>{
       githubToken:access_token,
       avatar:avatar_url
   }
-  const {ops:[user]}=await db
+  const {ops:[user],result}=await db
   .collection('users')
   .replaceOne({githubLogin:login},latestUserInfo,{upsert:true})
-
+ //@TOFIXME:
+  result.ok && pubsub.publish('user-added', { newUser: user })
+  
   return {user,token:access_token}
 }
-const addFakeUsers:Fn=async (parent,{count},{db})=>{
+const addFakeUsers:Fn=async (parent,{count},{db,pubsub})=>{
   const randomUserApi=`https://randomuser.me/api/?results=${count}`
   
   const {results}=await fetch(randomUserApi).then(res=>res.json())
@@ -64,8 +73,14 @@ const addFakeUsers:Fn=async (parent,{count},{db})=>{
     avatar:r.picture.thumbnail,
     githubToken:r.login.sha1
   }));
-  await db.collection('users').insert(users)
+ await db.collection('users').insert(users)
 
+ const newUsers=await db.collection('users').find()
+    .sort({ _id: -1 })
+    .limit(count)
+    .toArray()
+
+  newUsers.forEach(newUser => pubsub.publish('user-added', {newUser}))
   return users
 }
 const fakeUserAuth:Fn=async(parent,{githubLogin},{db})=>{

@@ -7,7 +7,8 @@
     "dev": "ts-node-dev --respawn --transpileOnly ./src/index.ts",
     "build": "tsc && ncp src/schema  dist/schema ",
     "clear": "rimraf dist/",
-    "start": "npm run clear && npm run build && node  ./dist/index.js"
+    "restart": "npm run clear && npm run build &&npm start",
+    "start": "node NODE_ENV=production dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +20,7 @@
     "typescript": "^3.7.2"
   },
   "dependencies": {
+    "@types/dotenv": "^8.2.0",
     "@types/mongoose": "^5.5.38",
     "@types/node-fetch": "^2.5.4",
     "apollo-server": "^2.9.12",

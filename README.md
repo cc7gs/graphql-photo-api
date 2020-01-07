@@ -549,6 +549,73 @@ query getCurrentUser{
 }
 ```
 该仓库为学习分支，了解更多内容点击该仓库[https://github.com/cc7gs/frontEnd_note/tree/master/basic/nodejs-basic/framework]
+## 订阅
+Apollo Server 自身已经支持订阅。默认情况下在 ws://localhost:4000 下设置 WebSocket。本文使用Apollo-server-express, 其自身不包含订阅要进行配置如下:
+
+修改 `src/index.ts` start 函数如下
+```js
+// src/index.ts
+
+import  {createServer} from 'http'
+const httpServer=createServer(app);
+// server.applyMiddleware({ app });
+server.installSubscriptionHandlers(httpServer)
+
+httpServer.listen({ port: 5000 }, () => {
+    console.log(`GraphQL server running @ http://localhost:5000${server.graphqlPath}`)
+})
+```
+1. 书写 schema
+```js
+type Subscription {
+  newPhoto: Photo!
+}
+```
+2. 在新增照片时发布给已订阅
+```js
+// resolvers/Mutation.ts
+const postPhoto:Fn=async(parent,args,{db,pubsub,currentUser})=>{
+
+    //...
+  const {insertedIds}=await db.collection('photos').insert(newPhoto)
+  newPhoto.id=insertedIds[0] 
+  
+  //发布
+  pubsub.publish('photo-added', { newPhoto })
+
+  return newPhoto
+}
+```
+3. 订阅解析器
+
+```js
+// resolvers/Subscription.ts
+module.exports = {
+    newPhoto: {
+        subscribe: (parent:any, args:any, { pubsub }:any) => pubsub.asyncIterator('photo-added')
+    },
+}
+```
+4. 新增`pubsub`实例
+
+```js
+//src/index.ts
+import { ApolloServer,PubSub } from 'apollo-server-express'
+
+async function start() {
+    const pubsub=new PubSub();
+    const server = new ApolloServer({
+        typeDefs,
+        resolvers,
+        context: async ({ req }) => {
+            const githubToken = req.headers.authorization;
+            
+            const currentUser = await db.collection('users').findOne({ githubToken })
+            return { db, currentUser,pubsub }
+        }
+        })
+}
+```
 
 # 参考
 [intro-to-graphql](https://slides.com/scotups/intro-to-graphql#/)
