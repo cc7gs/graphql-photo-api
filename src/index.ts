@@ -35,7 +35,7 @@ console.log(DB_HOST,'host')
         typeDefs,
         resolvers,
         context: async ({ req,connection }) => {
-          const githubToken = req?req.headers.authorization:connection.context.Authorization;
+          const githubToken = req?req.headers.authorization:connection!.context.Authorization;
           
           const currentUser = await db.collection('users').findOne({ githubToken })
           return { db, currentUser,pubsub }
