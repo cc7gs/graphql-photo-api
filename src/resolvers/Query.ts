@@ -11,6 +11,8 @@ const totalPhotos:Fn=(_,arg,{db})=>
 const allPhotos:Fn=(parent,args,{db})=>
     db.collection('photos')
     .estimatedDocumentCount()
+    .find()
+    .toArray()
 
 const Photo:Fn=(parent,args,{db})=>
     db.collection('photos')
