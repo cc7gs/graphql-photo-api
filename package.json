@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpileOnly ./src/index.ts",
+    "dev": "ts-node-dev --respawn --transpileOnly src/index.ts",
     "build": "tsc && ncp src/schema  dist/schema ",
     "clear": "rimraf dist/",
     "restart": "npm run clear && npm run build &&npm start",
-    "start": "node NODE_ENV=production dist/index.js"
+    "start": "cross-env NODE_ENV=production node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -25,7 +25,7 @@
     "@types/node-fetch": "^2.5.4",
     "apollo-server": "^2.9.12",
     "apollo-server-express": "^2.9.14",
-    "dotenv": "^8.2.0",
+    "cross-env": "^6.0.3",
     "express": "^4.17.1",
     "graphql": "^14.5.8",
     "graphql-import": "^0.7.1",

@@ -10,11 +10,10 @@ import { readFileSync } from 'fs'
 import {DB_HOST} from './utils/config'
 const typeDefs = readFileSync(path.resolve(__dirname, './schema/typeDefs.graphql'), 'UTF-8');
 
-
 async function start() {
     const app = express();
     let db:Db;
-
+console.log(DB_HOST,'host')
     try {
        const client= await mongoose.connect(DB_HOST!,
             { useNewUrlParser: true }
