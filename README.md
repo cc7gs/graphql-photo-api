@@ -1,7 +1,147 @@
+> 本文参考 [intro-to-graphql](https://slides.com/scotups/intro-to-graphql#/) 与 [grapQL 官网](https://graphql.cn/learn/) 记录一次学习 graphQL 之旅。[ 项目API地址](https://github.com/cc7gs/graphql-photo-api)。
+> 在学习语法时候，可以点开 [Apollo playground](http://ccwgs.top/playground)进行实践。
 
-# 语法简介
-## 查询与变更
-## schema与类型
+
+@[toc]
+# 什么是GraphQL?
+- 新的API标准、它由Facebook 2015年开源
+- 声明式数据获取、并能够准确获取描述中的数据
+- 强类型(类似 typescript)
+- GraphQL服务公开单个端点并相应查询
+- 可以与任何编程语言和框架一起使用
+
+## 与 REST对比优势
+- 数据的关联性和结构化更好
+- 实现订阅问题
+- 适应快速产品迭代，无版本API
+- 对于后端请求的数据有更细致的了解
+- 强类型系统定义API的功能
+- 前端后端可以根据Schema共同开发
+- 强大的开发工具
+
+>💡 要了解有关使用GraphQL的主要原因更多信息  [click this](https://www.prisma.io/blog/top-5-reasons-to-use-graphql-b60cfa683511)
+
+##  基本语法
+1. **字段**
+
+```js
+{
+  me{
+    name
+    avatar
+    githubLogin
+    inPhotos{
+      name
+      description
+    }
+  }
+}
+
+```
+2. **参数**
+```js
+{
+  User(login:4){
+    name
+    avatar
+  }
+}
+```
+3. **字段别名**
+```js
+{
+  User(login:4){
+    userName: name
+    avatar
+  }
+}
+```
+返回结果如下:
+```js
+{
+  "data": {
+    "User": {
+      "userName": "هستی نجاتی",
+      "avatar":"https://randomuser.me/api/portraits/thumb/women/50.jpg"
+    }
+  }
+}
+```
+4. **片段**
+
+片段允许重复使用常见的字段，从而减少了文档中的重复文本
+
+```js
+Query noFragments{
+  me{
+    name
+    avatar
+    githubLogin
+    inPhotos{
+      name
+      description
+	  postedBy{
+          name
+          avatar
+          githubLogin
+        }
+    }
+  }
+}
+```
+使用 片段进行优化查询:
+```js
+Query withFragments{
+  me{
+	...userInfo 
+    inPhotos{
+      name
+      description
+	  postedBy{
+         ...userInfo 
+        }
+    }
+  }
+}
+fragment userInfo on User{
+      name
+      avatar
+      githubLogin
+}
+```
+
+5.  变量
+	1. 使用 `$userID`代替查询中的静态值
+	2. 将 `$userID`传递给要查询的值
+	3. 将 `userID` 作为请求体提交查询
+
+```js
+query getUser($userID:ID!){
+  User(login:$userID){
+    userName:name
+  }
+}
+```
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200108152453978.png)
+
+6. 指令
+
+GraphQL 核心规范中目前包含两个指令:
+
+- @include(if: Boolean) 仅在参数为 true 时，包含此字段。
+- @skip(if: Boolean) 如果参数为 true，跳过此字段。
+![在这里插入图片描述](https://img-blog.csdnimg.cn/2020010815391633.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9jY3dncy5ibG9nLmNzZG4ubmV0,size_16,color_FFFFFF,t_70)
+
+8. 变更
+```js
+mutation addUser{
+  addFakeUsers(count:1){
+    githubLogin
+  }
+}
+```
+### 查询与变更
+### schema与类型
 schema是类型的集合,类型表示自定义对象，它是用于描述从服务端查询到的数据。
 为了方便定义类型，GraphQL引入了模版定义语言(Schema Definition Language,SDL)。它和 GraphQL 的查询语言很相似，让我们能够和 GraphQL schema 之间可以无语言差异地沟通。
 
@@ -179,7 +319,107 @@ type Mutation{
 }
 ```
 
-# 搭建 Server API 环境
+# 客户端
+使用 GraphQL Client 可以让我们专注于业务不用去关心网络请求、缓存等功能。
+
+目前有两个主要的GraphQL客户端:
+1. [Apollo Client](https://www.apollographql.com/docs/react/):
+它是由社区驱动开发，以处理缓存，更新UI等为目标构建客户端解决方案,目前包含React、Vue、Angular、ios和安卓系统的客户端包。
+2. [Relay](https://facebook.github.io/relay/):是 Facebook在2015年开源。它囊括了生产中使用GraphQL所获得的一切，但是它仅兼容React和React-Native。
+
+本文采用`Apollo Client React`构建应用，起步流程参考[官网](https://www.apollographql.com/docs/react/get-started/)
+
+下面实现一个简单查询demo构建查询基本流程:
+
+1. 创建 应用 引入依赖
+> npx create-react-app  photo-client --typescript
+
+> npm i @apollo/client  graphql react-router-dom  @types/react-router-dom
+
+Apollo Client核心包分为:
+ - `@apollo/client` - 核心包集成了 React-hooks
+ - `@apollo/react-components` - React Apollo render Props 渲染组件 
+ -  `@apollo/react-hoc`: - React Apollo HOC API(已经废弃)
+
+如果你只想用Hooks，那么只安装  `@apollo/client`即可
+
+2. 配置 client
+```js
+//index.tsx
+
+import React from 'react'
+import { render } from 'react-dom'
+import { ApolloClient, HttpLink, InMemoryCache, ApolloProvider } from '@apollo/client';
+import App from './App'
+
+const client = new ApolloClient({
+    cache: new InMemoryCache(),
+    link: new HttpLink({
+        uri: 'http://ccwgs.top/graphql'
+    })
+})
+
+render(
+    <ApolloProvider client={client}>
+      <App />
+    </ApolloProvider>, 
+    document.getElementById('root')
+)
+```
+3. 书写查询语句
+```js
+//app.tsx
+
+import React from 'react';
+import { BrowserRouter } from 'react-router-dom'
+import { gql } from '@apollo/client';
+import Users from './User'
+
+export const ROOT_QUERT = gql`
+ query userList{
+   totalUsers
+   allUsers{...userInfo}
+   me{ ...userInfo}
+ }
+ fragment userInfo on User{
+   githubLogin
+   name
+   avatar
+ }
+`
+const App = () => (
+  <BrowserRouter>
+    <Users />
+  </BrowserRouter>
+)
+export default App;
+```
+4. 引入查询组件
+```js
+//user.tsx
+
+import React from 'react'
+import { useQuery } from '@apollo/client'
+import { ROOT_QUERT } from './App'
+
+const Users = () => {
+    const { loading, error, data, refetch } = useQuery(ROOT_QUERT);
+    if (error) return <>`Error! ${error}`</>
+    if (loading) { return <p>loading users ...</p> }
+    return (
+        <>
+            <h2>总共 ${data.totalUsers}人</h2>
+            {data.me && <img src={data.me.avatar} />}
+            {
+                data.allUsers.map((user:any) => <h3>{user.name}</h3>)
+            }
+            <button onClick={() => refetch()}>Refetch!</button>
+        </>)
+}
+
+```
+# 服务端
+## 搭建 Server API 环境
 > npm i apollo-server 
 > npm i typescript ts-node-dev -D
 
@@ -263,11 +503,11 @@ server
 > npm start
 > 打开 连接 http://localhost:4000
 
-![运行实例图](images/demo1.png)
+[外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-V2LCBPbh-1578448376464)(images/demo1.png)]
 
 喜欢ts伙伴可以查看👉[使用 node+typescript 搭建 GraphQL API](https://ccwgs.blog.csdn.net/article/details/103701560)
 
-# 服务端开发
+## 服务端开发
 基于上面环境搭建将 `apollo-server`更换`apollo-server-express`
 
 > npm i apollo-server-express graphql express  mongoose ncp dotenv node-fetch
@@ -287,13 +527,13 @@ server
 src
 ├── index.ts    //入口
 ├── lib         //工具库
-│   └── index.ts  
+│   └── index.ts  
 ├── resolvers   //解析器
-│   ├── Mutation.ts
-│   ├── Query.ts
-│   ├── Type.ts
-│   ├── index.ts
-│   └── types.ts
+│   ├── Mutation.ts
+│   ├── Query.ts
+│   ├── Type.ts
+│   ├── index.ts
+│   └── types.ts
 └── schema      
     └── typeDefs.graphql
 ```
@@ -337,7 +577,7 @@ start()
 
 ```
 
-## 连接数据库
+### 连接数据库
 [mongodb安装与使用](https://blog.csdn.net/qq_37674616/article/details/86680680)
 
 1. 创建.env文件
@@ -379,7 +619,7 @@ function start(){
 }
 
 ```
-## 修改解析器(从数据库中获取数据)
+### 修改解析器(从数据库中获取数据)
 
 shema如下：
 ```js
@@ -401,7 +641,7 @@ const allPhotos:Fn=(parent,args,{db})=>
     .estimatedDocumentCount()
 
 ```
-## github OAuth
+### github OAuth
 
 [OAuth 介绍与使用](https://blog.csdn.net/qq_37674616/article/details/99496916)
 
@@ -509,7 +749,7 @@ mutation github{
   }
 }
 ```
-### 根解析器解析token
+#### 根解析器解析token
 我们通过根解析器解析token返回用户信息,如果无效则返回null。
 ```js
 //src/index.ts
@@ -548,8 +788,9 @@ query getCurrentUser{
   }
 }
 ```
-该仓库为学习分支，了解更多内容点击该仓库[https://github.com/cc7gs/frontEnd_note/tree/master/basic/nodejs-basic/framework]
-## 订阅
+该仓库为学习分支，了解更多内容[点击该仓库](https://github.com/cc7gs/frontEnd_note/tree/master/basic/nodejs-basic/framework)
+
+### 订阅
 Apollo Server 自身已经支持订阅。默认情况下在 ws://localhost:4000 下设置 WebSocket。本文使用Apollo-server-express, 其自身不包含订阅要进行配置如下:
 
 修改 `src/index.ts` start 函数如下
@@ -557,8 +798,9 @@ Apollo Server 自身已经支持订阅。默认情况下在 ws://localhost:4000 
 // src/index.ts
 
 import  {createServer} from 'http'
+
+server.applyMiddleware({ app });
 const httpServer=createServer(app);
-// server.applyMiddleware({ app });
 server.installSubscriptionHandlers(httpServer)
 
 httpServer.listen({ port: 5000 }, () => {
@@ -617,6 +859,116 @@ async function start() {
 }
 ```
 
+### 安全方面
+一个应用可靠性一定是排在第一位的，那么如果提高GraphQL Server安全，可以考虑如下方面:
+#### 超时
+第一个简单策略就是设置超时来防御大型查询。
+
+下面我们添加一个五秒超时时间:
+```js
+import {createServer} from 'http'
+
+const httpServer=createServer(app);
+httpServer.timeout=5000;
+
+```
+接下来我们将查询开始时间传入上下文,之后所有解析器都知道开始时间，如果超过时长则抛出错误。
+```js
+const context=async ({})=>{
+	//...
+	return {
+  		timestamp:performance.now()
+  	}
+}
+```
+#### 设置查询深度
+有时候客户端滥用查询，写出如下查询
+```js
+query IAmEvil {
+  author(id: "abc") {
+    posts {
+      author {
+        posts {
+          author {
+            posts {
+              author {
+                # that could go on as deep as the client wants!
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+此时我们可以使用`graphql-ruby`、`graphql-depth-limit`等库来设置深度限制。
+```js
+import depthLimit from 'graphql-depth-limit'
+ ...
+    const server = new ApolloServer({
+       typeDefs,
+       resolvers,
+       validationRules:[depthLimit(5)],
+       context: async ({ req }) => {
+       ...
+      }
+     })
+```
+**优点:**
+- 文档AST是静态分析,因此该查询不会被执行因此也不会给服务端带来压力
+
+**缺点:**
+-  只用深度限制不能阻止所有滥用查询情况，一般要结合复杂度。
+#### 查询复杂度
+有时候客户端查询深度并不高，但是查询字段的数量庞大，性能也会造成浪费。
+例如下面实例，查询深度不高，但是数据量特别大，由于每个字段映射都会调用解析器函数 因此非常耗费性能。
+
+```js
+Query everthing ($id:ID!){
+   totalUsers
+   photo(id:$id){
+		name
+	}
+	allUsers{
+		id,
+		name,
+		postedPhotos{
+			name
+		}
+		taggedUsers{
+			id,
+			name
+		}
+	}
+}
+```
+GraphQL对于复杂度校验中有个默认规则，每个标量字符赋值为1，如果该字段返回列表则乘以10.
+```js
+Query everthing ($id:ID!){
+   totalUsers  // complexity 1
+   photo(id:$id){
+		name   // complexity 1
+	}
+	allUsers{
+		id,  // complexity 10
+		name,  // complexity 10
+		postedPhotos{
+			name   // complexity 100
+		}
+		taggedUsers{
+			id,  // complexity 100
+			name  // complexity 100
+		}
+	}
+}     // total complexity 322
+```
+下面我们可以借助量类似`graphql-validation-complexity`等库来解决。
+
 # 参考
+[How TO GraphQL](https://www.howtographql.com/)
 [intro-to-graphql](https://slides.com/scotups/intro-to-graphql#/)
-[grapQL](https://graphql.cn/learn/)
+[grapQL 官网](https://graphql.cn/learn/)
+
+# 资料
+[randomuser](https://randomuser.me/): 生成mock user数据
