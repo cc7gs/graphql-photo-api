@@ -34,8 +34,8 @@ console.log(DB_HOST,'host')
     const server = new ApolloServer({
         typeDefs,
         resolvers,
-        context: async ({ req }) => {
-          const githubToken = req.headers.authorization;
+        context: async ({ req,connection }) => {
+          const githubToken = req?req.headers.authorization:connection.context.Authorization;
           
           const currentUser = await db.collection('users').findOne({ githubToken })
           return { db, currentUser,pubsub }
@@ -53,8 +53,8 @@ console.log(DB_HOST,'host')
 
     app.get('/playground', expressPlayground({ endpoint: '/graphql' }))
 
-    httpServer.listen({ port: 5000 }, () => {
-        console.log(`GraphQL server running @ http://localhost:5000${server.graphqlPath}`)
+    httpServer.listen({ port: 4000 }, () => {
+        console.log(`GraphQL server running @ http://localhost:4000${server.graphqlPath}`)
     })
 
 }
