@@ -41,8 +41,9 @@ console.log(DB_HOST,'host')
           return { db, currentUser,pubsub }
         }
       })
+
+    server.applyMiddleware({ app });
     const httpServer=createServer(app);
-    // server.applyMiddleware({ app });
     server.installSubscriptionHandlers(httpServer)
     
     app.get('/', (req, res) => {
