@@ -39,7 +39,8 @@ console.log(DB_HOST,'host')
           
           const currentUser = await db.collection('users').findOne({ githubToken })
           return { db, currentUser,pubsub }
-        }
+        },
+        tracing: true,
       })
 
     server.applyMiddleware({ app });
