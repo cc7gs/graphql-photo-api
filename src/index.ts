@@ -13,7 +13,6 @@ const typeDefs = readFileSync(path.resolve(__dirname, './schema/typeDefs.graphql
 async function start() {
     const app = express();
     let db:Db;
-console.log(DB_HOST,'host')
     try {
        const client= await mongoose.connect(DB_HOST!,
             { useNewUrlParser: true }
@@ -40,10 +39,10 @@ console.log(DB_HOST,'host')
           const currentUser = await db.collection('users').findOne({ githubToken })
           return { db, currentUser,pubsub }
         },
-        tracing: true,
+        subscriptions:{path:'/graphql'}
       })
 
-    server.applyMiddleware({ app });
+    server.applyMiddleware({ app,path:'/graphql' });
     const httpServer=createServer(app);
     server.installSubscriptionHandlers(httpServer)
     
@@ -51,7 +50,7 @@ console.log(DB_HOST,'host')
         res.send('Welcome to the PhotoShare API');
     })
 
-    app.get('/playground', expressPlayground({ endpoint: '/graphql' }))
+    // app.get('/playground', expressPlayground({ endpoint: '/graphql' }))
 
     httpServer.listen({ port: 4000 }, () => {
         console.log(`GraphQL server running @ http://localhost:4000${server.graphqlPath}`)

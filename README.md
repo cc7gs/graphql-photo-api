@@ -1,8 +1,15 @@
 > 本文参考 [intro-to-graphql](https://slides.com/scotups/intro-to-graphql#/) 与 [grapQL 官网](https://graphql.cn/learn/) 记录一次学习 graphQL 之旅。[ 项目API地址](https://github.com/cc7gs/graphql-photo-api)。
+
 > 在学习语法时候，可以点开 [Apollo playground](http://ccwgs.top/playground)进行实践。
 
+# 目录
 
-@[toc]
+1. [什么是GraphQL?](#什么是GraphQL?)
+2. [客户端](#客户端)
+3. [服务端](#服务端)
+4. [参考](#参考)
+5. [资料](#资料)
+
 # 什么是GraphQL?
 - 新的API标准、它由Facebook 2015年开源
 - 声明式数据获取、并能够准确获取描述中的数据
@@ -418,6 +425,9 @@ const Users = () => {
 }
 
 ```
+
+**[回到顶部](#目录)**
+
 # 服务端
 ## 搭建 Server API 环境
 > npm i apollo-server 
@@ -506,6 +516,8 @@ server
 [外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-V2LCBPbh-1578448376464)(images/demo1.png)]
 
 喜欢ts伙伴可以查看👉[使用 node+typescript 搭建 GraphQL API](https://ccwgs.blog.csdn.net/article/details/103701560)
+
+**[回到顶部](#目录)**
 
 ## 服务端开发
 基于上面环境搭建将 `apollo-server`更换`apollo-server-express`
@@ -965,10 +977,82 @@ Query everthing ($id:ID!){
 ```
 下面我们可以借助量类似`graphql-validation-complexity`等库来解决。
 
+**[回到顶部](#目录)**
+
+# 其它
+1. 如果接口通过 Nginx部署时,注意要开通WS(webSocket),配置大致如下:
+```
+#websocket配置
+map $http_upgrade $connection_upgrade {
+            default upgrade;
+            '' close;
+}
+upstream graphqlPhotoApi {
+        server 127.0.0.1:4000;
+}
+
+server {
+      listen 80;
+      server_name  ccwgs.top; 
+     location / {
+            proxy_http_version 1.1;
+            proxy_pass http://graphqlPhotoApi;
+            
+           #配置Nginx支持webSocket开始
+            proxy_set_header Host $http_host;  
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+             proxy_redirect off;
+   }
+    
+} 
+```
+2.  Apollo express server 2.0后不用集成 `graphql-playground-middleware-express`
+```js
+import { ApolloServer,PubSub,gql } from 'apollo-server-express'
+import  {createServer} from 'http'
+function start(){
+  ...
+    const pubsub=new PubSub();
+    const server = new ApolloServer({
+        typeDefs,
+        resolvers,
+        context: async ({ req,connection }) => {
+          const githubToken = req?req.headers.authorization:connection!.context.Authorization;
+          
+          const currentUser = await db.collection('users').findOne({ githubToken })
+          return { db, currentUser,pubsub }
+        },
+        subscriptions:{path:'/graphql'}
+      })
+
+    server.applyMiddleware({ app,path:'/graphql' });
+    const httpServer=createServer(app);
+    server.installSubscriptionHandlers(httpServer)
+    
+      httpServer.listen({ port: 4000 }, () => {
+        console.log(`GraphQL server running @ http://localhost:4000${server.graphqlPath}`)
+        console.log(`🚀 Subscriptions ready at ws://localhost:4000${server.subscriptionsPath}`)
+    })
+ }
+```
+
 # 参考
+
 [How TO GraphQL](https://www.howtographql.com/)
+
 [intro-to-graphql](https://slides.com/scotups/intro-to-graphql#/)
+
 [grapQL 官网](https://graphql.cn/learn/)
+
 
 # 资料
 [randomuser](https://randomuser.me/): 生成mock user数据
+
+[graphQL playground](https://www.graphqlbin.com/)
+
+[graphiQL](https://github.com/graphql/graphiql)
+
+[graqhQL公共接口](https://github.com/APIs-guru/graphql-apis)
+
+[Snowtooth](http://snowtooth.moonhighway.com/)
