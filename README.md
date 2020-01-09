@@ -513,7 +513,7 @@ server
 > npm start
 > 打开 连接 http://localhost:4000
 
-[外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-V2LCBPbh-1578448376464)(images/demo1.png)]
+![](./src/assets/photos/demo1.png)
 
 喜欢ts伙伴可以查看👉[使用 node+typescript 搭建 GraphQL API](https://ccwgs.blog.csdn.net/article/details/103701560)
 

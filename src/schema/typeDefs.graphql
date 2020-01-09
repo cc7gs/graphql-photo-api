@@ -1,6 +1,7 @@
 # defination schema
 scalar DateTime
 
+
 type User{
   githubLogin: ID!
   name: String
@@ -32,6 +33,7 @@ input PostPhotoInput {
   name: String!
   category: PhotoCategory = SELFIE
   description: String
+  file: Upload!
 }
 
 type AuthPayload {

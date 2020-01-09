@@ -1,8 +1,9 @@
-import {authorizeWithGithub} from '../lib'
 import  fetch from 'node-fetch'
 import {ObjectID}from 'mongodb'
+import path from 'path'
 import {Fn} from './types'
 import {CLIENT_ID,CLIENT_SECRET} from '../utils/config'
+import {authorizeWithGithub,uploadStream} from '../lib'
 
 const postPhoto:Fn=async(parent,args,{db,pubsub,currentUser})=>{
   //1. 检查登录是否登录
@@ -19,6 +20,10 @@ const postPhoto:Fn=async(parent,args,{db,pubsub,currentUser})=>{
   const {insertedIds}=await db.collection('photos').insert(newPhoto)
   newPhoto.id=insertedIds[0] 
   
+  const toPath=path.join(__dirname,'..','assets','photos',`${newPhoto.id}.jpg`);
+  const {stream}=await args.input.file;
+  await uploadStream(stream,toPath);
+
   pubsub.publish('photo-added', { newPhoto })
 
   return newPhoto

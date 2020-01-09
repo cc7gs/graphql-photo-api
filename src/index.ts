@@ -49,9 +49,14 @@ async function start() {
     app.get('/', (req, res) => {
         res.send('Welcome to the PhotoShare API');
     })
+    console.log(path.join(__dirname,'assets/photos'))
+
+    app.use('/photos', express.static(path.join(__dirname,'assets/photos')));
+
 
     // app.get('/playground', expressPlayground({ endpoint: '/graphql' }))
 
+    httpServer.timeout = 5000
     httpServer.listen({ port: 4000 }, () => {
         console.log(`GraphQL server running @ http://localhost:4000${server.graphqlPath}`)
     })

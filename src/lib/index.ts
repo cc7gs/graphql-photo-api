@@ -1,4 +1,6 @@
 import  fetch from 'node-fetch'
+import fs from 'fs'
+
 type ReqGithub={
     client_id:string;
     client_secret:String;
@@ -6,7 +8,6 @@ type ReqGithub={
 }
 const requestGithubToken=(credentials:ReqGithub)=>
 {
-const { client_id, client_secret,code} = credentials
 return fetch(
     'https://github.com/login/oauth/access_token',
     {
@@ -25,7 +26,17 @@ fetch(`https://api.github.com/user?access_token=${token}`)
 
 export const authorizeWithGithub=async(credentials:ReqGithub)=>{
     const {access_token}=await requestGithubToken(credentials);
-    console.log(access_token,'token');
     const githubUser=await requestGithubUserAccount(access_token);
     return {...githubUser,access_token}
 }
+
+export const uploadStream=(stream:any,path:any)=>
+    new Promise((resolve,reject)=>{
+        stream.on('error',(err:any)=>{
+            if(stream.truncated){
+                fs.unlinkSync(path)
+            }
+            reject(err)
+        }).on('end',resolve)
+        .pipe(fs.createWriteStream(path))
+    })
